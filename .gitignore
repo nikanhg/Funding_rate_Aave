@@ -1,1 +1,3 @@
 Data
+# Ignore Jupyter notebook with API key or sensitive information
+Funding_rate_Aave\Saam\API_Key_Fred.py
