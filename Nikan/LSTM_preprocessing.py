@@ -26,11 +26,14 @@ def connect_to_database():
 # Function to query merged data from crypto_lending_borrowing and crypto_price tables
 def query_merged_crypto_data(connection):
     query = """
-    SELECT clb.*, cp.*
+    SELECT clb.lending_rate, clb.borrowing_rate, clb.utilization_rate, clb.stable_borrow_rate,
+    cp.*, usb.yield
     FROM crypto_lending_borrowing clb
     JOIN crypto_price cp 
         ON clb.crypto_symbol = cp.crypto_symbol
         AND clb.date = cp.date
+    LEFT JOIN US_Bond_Yield usb
+        ON clb.date = usb.date
     WHERE UPPER(clb.crypto_symbol) IN ('1INCHUSDT', 'BALUSDT', 'BATUSDT', 'CRVUSDT', 'ENJUSDT', 'ENSUSDT', 'KNCUSDT', 'LINKUSDT', 'MANAUSDT', 'MKRUSDT', 'RENUSDT', 'SNXUSDT', 'UNIUSDT', 'WBTCUSDT', 'YFIUSDT', 'ZRXUSDT')
     """
     cursor = connection.cursor()
