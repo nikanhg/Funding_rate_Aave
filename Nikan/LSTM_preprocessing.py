@@ -72,8 +72,12 @@ def calculate_iqr_bounds(series, multiplier=1.5):
     Q1 = series.quantile(0.25)
     Q3 = series.quantile(0.75)
     IQR = Q3 - Q1
-    lower_bound = max(Q1 - multiplier * IQR, 0)
-    upper_bound = Q3 + multiplier * IQR
+    if multiplier == 'remove':
+        lower_bound = min(series) - 1
+        upper_bound = max(series) + 1
+    else:
+        lower_bound = max(Q1 - multiplier * IQR, 0)
+        upper_bound = Q3 + multiplier * IQR
     return lower_bound, upper_bound
 
 # calculate returns on valid windows
