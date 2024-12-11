@@ -421,7 +421,7 @@ def classification_metrics(y_true, y_pred, printed = True):
         conf_matrix = confusion_matrix(y_true, y_pred)
         # Visualization of the confusion matrix using Seaborn
         plt.figure(figsize=(8, 6))
-        sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=['-1', '0', '1'], yticklabels=['-1', '0', '1'])
+        sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=[ '0', '1', '2'], yticklabels=[ '0', '1', '2'])
         plt.xlabel('Predicted Labels')
         plt.ylabel('True Labels')
         plt.title('Confusion Matrix')
