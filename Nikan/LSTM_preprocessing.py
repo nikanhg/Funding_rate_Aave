@@ -360,11 +360,18 @@ def extract_valid_windows_v2(df, date_col, input_window, target_window, input_co
             target_data = window.iloc[input_window:][target_columns].values
             # jsut a simple differnces and sign for now
             differences = target_data[-1, :] - target_data[0, :]
-            differences = np.sign(differences)
+            differences = custom_sign(differences)
             inputs.append(input_data)
             targets.append(differences)
 
     return np.array(inputs), np.array(targets)
+
+
+
+
+# Custom sign function
+def custom_sign(x):
+    return np.where(x > 0, 1, np.where(x == 0, 0, 2))
 
 
 
