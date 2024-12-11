@@ -435,6 +435,6 @@ def classification_metrics(y_true, y_pred, printed = True):
         
         # Detailed classification report
         print("\nDetailed Classification Report:")
-        print(classification_report(y_true, y_pred, target_names=['-1', '0', '1']))
+        print(classification_report(y_true, y_pred, target_names=[ '0', '1', '2']))
 
     return accuracy, precision, recall, f1
