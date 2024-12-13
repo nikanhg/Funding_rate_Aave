@@ -21,21 +21,13 @@ from keras.layers import BatchNormalization
  - loss = sparse_categorical_crossentropy
  - metrics accuracy"""
 
-def Base_Model_LSTM(inputs, outputs, test_size=0.2, valid_size=0.25, epochs=2, batch_size=100, d1=0.1, d2 = 0.05, cell_size = 80):
+def Base_Model_LSTM(X_train,X_valid,X_test,Y_train,Y_valid,Y_test, epochs=2, batch_size=100, d1=0.1, d2 = 0.05, cell_size = 80):
     # Clearing the TensorFlow session to ensure the model starts with fresh weights and biases
     tf.keras.backend.clear_session()
     n_classes = 3
 
     cell_size_1 = cell_size
     cell_size_2 = cell_size_1//2
-
-    # Splitting the data into train+validation and test sets
-    X_train_valid, X_test, y_train_valid, y_test = train_test_split(
-        inputs, outputs, test_size=test_size)
-
-    # Splitting the train+validation set into separate training and validation sets
-    X_train, X_valid, y_train, y_valid = train_test_split(
-        X_train_valid, y_train_valid, test_size=valid_size)
 
     # Model definition
     inputs = Input(shape=(X_train.shape[1], X_train.shape[2]))
@@ -61,8 +53,8 @@ def Base_Model_LSTM(inputs, outputs, test_size=0.2, valid_size=0.25, epochs=2, b
         metrics=['accuracy'])
 
     # Training the model
-    history = LSTM_base.fit(x=X_train, y=y_train,
-                    validation_data=(X_valid, y_valid),
+    history = LSTM_base.fit(x=X_train, y=Y_train,
+                    validation_data=(X_valid, Y_valid),
                     epochs=epochs,
                     batch_size=batch_size,
                     shuffle=False)
@@ -93,7 +85,7 @@ def Base_Model_LSTM(inputs, outputs, test_size=0.2, valid_size=0.25, epochs=2, b
     y_pred = LSTM_base.predict(X_test)
     y_pred = np.argmax(y_pred, axis=-1)
 
-    return y_test, y_pred
+    return Y_test, y_pred
 
 
 # VAE Model:
@@ -113,22 +105,14 @@ def Base_Model_LSTM(inputs, outputs, test_size=0.2, valid_size=0.25, epochs=2, b
  - loss = sparse_categorical_crossentropy & KL divergence
  - metrics accuracy"""
 
-def LSTM_autoencoder_rates_and_class(inputs, outputs, test_size=0.2, valid_size=0.25, epochs=2, 
-                                     batch_size=100, d1=0.1, cell_size = 80, loss_weights=[1,0.1], latent_dim=10):
+def LSTM_autoencoder_rates_and_class(X_train,X_valid,X_test,Y_train,Y_valid,Y_test,epochs=10, 
+                                     batch_size=64, d1=0.1, cell_size = 80, loss_weights=[1,0.1], latent_dim=10):
     
     tf.keras.backend.clear_session()
     n_classes = 3
 
     cell_size_1 = cell_size
     cell_size_2 = cell_size_1//2
-
-    # Splitting the data into train+validation and test sets
-    X_train_valid, X_test, y_train_valid, y_test = train_test_split(
-        inputs, outputs, test_size=test_size)
-
-    # Splitting the train+validation set into separate training and validation sets
-    X_train, X_valid, y_train, y_valid = train_test_split(
-        X_train_valid, y_train_valid, test_size=valid_size)
     
     class KLDivergenceLayer(Layer):
         def call(self, inputs):
@@ -156,8 +140,7 @@ def LSTM_autoencoder_rates_and_class(inputs, outputs, test_size=0.2, valid_size=
     z = Lambda(sampling, output_shape=(latent_dim,))([z_mean, z_log_var])
     
     decoder_hidden = Dense(cell_size_2, activation='relu')(z)
-    skip_connection = Concatenate()([decoder_hidden, Batch_norm_2])
-    reshaped_decoder_input = Reshape((1, cell_size_1))(skip_connection)
+    reshaped_decoder_input = Reshape((1, cell_size_2))(decoder_hidden)
     Lstm_decoder_1 = LSTM(cell_size_1, return_sequences=True, use_cudnn=False, activation='tanh')(reshaped_decoder_input)
     Batch_norm_3 = BatchNormalization()(Lstm_decoder_1)
     Lstm_decoder_2 = LSTM(cell_size_2, return_sequences=False, use_cudnn=False, activation='tanh')(Batch_norm_3)
@@ -185,8 +168,8 @@ def LSTM_autoencoder_rates_and_class(inputs, outputs, test_size=0.2, valid_size=
     LSTM_base_decoder.summary()
     
     history = LSTM_base_decoder.fit(X_train, 
-               [y_train, np.zeros_like(y_train)],
-               validation_data=(X_valid, [y_valid, np.zeros_like(y_valid)]),
+               [Y_train, np.zeros_like(Y_train)],
+               validation_data=(X_valid, [Y_valid, np.zeros_like(Y_valid)]),
                                 epochs=epochs,
                                 batch_size=batch_size,
                                 shuffle=False)
@@ -227,8 +210,6 @@ def LSTM_autoencoder_rates_and_class(inputs, outputs, test_size=0.2, valid_size=
     y_pred, y_placeholder = LSTM_base_decoder.predict(X_test)
     y_pred = np.argmax(y_pred, axis=-1)
 
-    return y_test, y_pred
-
 # Attention Model:
 """Transformer based Architecture minus the pos encodings:
  - Input 3D
@@ -244,7 +225,7 @@ def LSTM_autoencoder_rates_and_class(inputs, outputs, test_size=0.2, valid_size=
  - loss = sparse_categorical_crossentropy
  - metrics accuracy"""
 
-def Attention_model(inputs, outputs, test_size=0.2, valid_size=0.25, epochs=2,
+def Attention_model(X_train,X_valid,X_test,Y_train,Y_valid,Y_test, epochs=2,
                      batch_size=100, d1=0.1, d2 = 0.05, cell_size = 80, attention_heads=4):
 
     tf.keras.backend.clear_session()
@@ -252,14 +233,6 @@ def Attention_model(inputs, outputs, test_size=0.2, valid_size=0.25, epochs=2,
 
     cell_size_1 = cell_size
     cell_size_2 = cell_size_1//2
-
-    # Splitting the data into train+validation and test sets
-    X_train_valid, X_test, y_train_valid, y_test = train_test_split(
-        inputs,outputs, test_size=test_size)
-
-    # Splitting the train+validation set into separate training and validation sets
-    X_train, X_valid, y_train, y_valid = train_test_split(
-        X_train_valid, y_train_valid, test_size=valid_size)
 
     inputs = Input(shape=(X_train.shape[1], X_train.shape[2]))
     
@@ -303,8 +276,8 @@ def Attention_model(inputs, outputs, test_size=0.2, valid_size=0.25, epochs=2,
 
     Attention_base.summary()
 
-    history = Attention_base.fit(x=X_train, y=y_train,
-                    validation_data=(X_valid, y_valid),
+    history = Attention_base.fit(x=X_train, y=Y_train,
+                    validation_data=(X_valid, Y_valid),
                     epochs=epochs,
                     batch_size=batch_size,
                     shuffle=False)
@@ -336,7 +309,7 @@ def Attention_model(inputs, outputs, test_size=0.2, valid_size=0.25, epochs=2,
     y_pred = Attention_base.predict(X_test)
     y_pred = np.argmax(y_pred, axis=-1)
 
-    return y_test, y_pred
+    return Y_test, y_pred
 
     
 
