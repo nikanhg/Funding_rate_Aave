@@ -72,8 +72,12 @@ def calculate_iqr_bounds(series, multiplier=1.5):
     Q1 = series.quantile(0.25)
     Q3 = series.quantile(0.75)
     IQR = Q3 - Q1
-    lower_bound = max(Q1 - multiplier * IQR, 0)
-    upper_bound = Q3 + multiplier * IQR
+    if multiplier == 'remove':
+        lower_bound = min(series) - 1
+        upper_bound = max(series) + 1
+    else:
+        lower_bound = max(Q1 - multiplier * IQR, 0)
+        upper_bound = Q3 + multiplier * IQR
     return lower_bound, upper_bound
 
 # calculate returns on valid windows
@@ -438,3 +442,93 @@ def classification_metrics(y_true, y_pred, printed = True):
         print(classification_report(y_true, y_pred, target_names=[ '0', '1', '2']))
 
     return accuracy, precision, recall, f1
+
+
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.layers import Input, LSTM, Dense, Dropout, Masking, Reshape, Layer, Lambda, Concatenate, LayerNormalization, MultiHeadAttention
+from tensorflow.keras.models import Model
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score, classification_report
+from tensorflow.keras.optimizers import Adadelta
+from keras.layers import BatchNormalization
+
+def train_v1(inputs, outputs, test_size=0.2, valid_size=0.25, epochs=100, batch_size=200, d1=0.1, d2 = 0.05, cell_size = 80, details=True):
+    # Clearing the TensorFlow session to ensure the model starts with fresh weights and biases
+    tf.keras.backend.clear_session()
+    n_classes = 3
+
+    cell_size_1 = cell_size
+    cell_size_2 = cell_size_1//2
+
+    # Splitting the data into train+validation and test sets
+    X_train_valid, X_test, y_train_valid, y_test = train_test_split(
+        inputs, outputs, test_size=test_size)
+
+    # Splitting the train+validation set into separate training and validation sets
+    X_train, X_valid, y_train, y_valid = train_test_split(
+        X_train_valid, y_train_valid, test_size=valid_size)
+
+    # Model definition
+    inputs = Input(shape=(X_train.shape[1], X_train.shape[2]))
+    Lstm_layer_1 = LSTM(cell_size_1, return_sequences=True, stateful=False)(inputs)
+    Batch_norm_1 = BatchNormalization()(Lstm_layer_1)
+    Dropout_layer_1 = Dropout(d1)(Batch_norm_1)
+    Lstm_layer_2 = LSTM(cell_size_2, return_sequences=False, stateful=False)(Dropout_layer_1)  # just halved
+    Batch_norm_2 = BatchNormalization()(Lstm_layer_2)
+    Drouput_layer_2 = Dropout(d2)(Batch_norm_2)
+    predictions = Dense(n_classes, activation='softmax')(Drouput_layer_2)
+    LSTM_base = Model(inputs=inputs, outputs=predictions)
+
+  
+    # optimizer
+    optimizer = Adadelta(
+    learning_rate=1.0,
+    rho=0.8,
+    epsilon=1e-7)      # Default , to prevent division by zero)
+
+    LSTM_base.compile(
+        optimizer=optimizer,
+        loss='sparse_categorical_crossentropy',
+        metrics=['accuracy'])
+
+    # Training the model
+    history = LSTM_base.fit(x=X_train, y=y_train,
+                    validation_data=(X_valid, y_valid),
+                    epochs=epochs,
+                    batch_size=batch_size,
+                    shuffle=False,
+                    verbose=0)
+ 
+    if details == True:
+        LSTM_base.summary()
+        fig, ax1 = plt.subplots()
+
+        # Plot losses on the primary y-axis
+        ax1.set_xlabel('Epoch')
+        ax1.set_ylabel('Loss', color='tab:red')
+        ax1.plot(history.history['loss'], label='Train Loss', color='red', linestyle='-')
+        ax1.plot(history.history['val_loss'], label='Validation Loss', color='red', linestyle='--')
+        ax1.tick_params(axis='y', labelcolor='tab:red')
+
+        # Create a second y-axis for accuracy
+        ax2 = ax1.twinx()
+        ax2.set_ylabel('Accuracy', color='tab:blue')
+        ax2.plot(history.history['accuracy'], label='Train Accuracy', color='blue', linestyle='-')
+        ax2.plot(history.history['val_accuracy'], label='Validation Accuracy', color='blue', linestyle='--')
+        ax2.tick_params(axis='y', labelcolor='tab:blue')
+
+        # Combine legends from both axes
+        fig.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=2)  # Legend outside the plot
+
+        plt.title('Model Accuracy and Loss')
+        plt.tight_layout()  # Adjust layout to avoid clipping
+        plt.show()
+
+
+    y_pred = LSTM_base.predict(X_test)
+    y_pred = np.argmax(y_pred, axis=-1)
+
+    return y_test, y_pred
