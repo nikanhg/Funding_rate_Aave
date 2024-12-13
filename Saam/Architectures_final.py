@@ -282,10 +282,10 @@ def Attention_model(inputs, outputs, test_size=0.2, valid_size=0.25, epochs=2,
     norm_2 = LayerNormalization()(residual_2)
     dropout_1 = Dropout(d1)(norm_2)
 
-    ffw = Dense(cell_size_2)(dropout_1)
+    ffw = Dense(cell_size_2, activation="swish")(dropout_1)
     dropout_2 = Dropout(d2)(ffw)
     flatten_ = Flatten()(dropout_2)
-    ffw_2 = Dense(cell_size_2)(flatten_)
+    ffw_2 = Dense(cell_size_2,activation="swish")(flatten_)
 
     class_predictions = Dense(n_classes, activation='softmax',name="class")(ffw_2)
     Attention_base = Model(inputs=inputs, outputs=class_predictions)
