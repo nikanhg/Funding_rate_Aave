@@ -225,7 +225,7 @@ def LSTM_autoencoder_rates_and_class(X_train,X_valid,X_test,Y_train,Y_valid,Y_te
  - loss = sparse_categorical_crossentropy
  - metrics accuracy"""
 
-def Attention_model(X_train,X_valid,X_test,Y_train,Y_valid,Y_test, epochs=2,
+def Attention_model(X_train,X_valid,X_test,Y_train,Y_valid,Y_test,weights, epochs=100,
                      batch_size=100, d1=0.1, d2 = 0.05, cell_size = 80, attention_heads=4):
 
     tf.keras.backend.clear_session()
@@ -238,7 +238,7 @@ def Attention_model(X_train,X_valid,X_test,Y_train,Y_valid,Y_test, epochs=2,
     
     attention_layer_1 = MultiHeadAttention(
     num_heads=attention_heads,
-    key_dim=cell_size)(
+    key_dim=cell_size//attention_heads)(
     query=inputs,
     key=inputs,
     value=inputs)
@@ -247,7 +247,7 @@ def Attention_model(X_train,X_valid,X_test,Y_train,Y_valid,Y_test, epochs=2,
 
     attention_layer_2 = MultiHeadAttention(
     num_heads=attention_heads,
-    key_dim=cell_size_2)(
+    key_dim=cell_size//attention_heads)(
     query=norm_1,
     key=norm_1,
     value=norm_1)
@@ -280,6 +280,7 @@ def Attention_model(X_train,X_valid,X_test,Y_train,Y_valid,Y_test, epochs=2,
                     validation_data=(X_valid, Y_valid),
                     epochs=epochs,
                     batch_size=batch_size,
+                    class_weight = weights,
                     shuffle=False)
 
 
