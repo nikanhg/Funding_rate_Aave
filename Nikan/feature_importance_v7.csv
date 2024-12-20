@@ -1,0 +1,2 @@
+,columns,total_windows,input_window,output_window,outlier_threshold,accuracy,precision,recall,f1
+0,"['lending_rate', 'borrowing_rate', 'utilization_rate', 'yield', 'market_cap', 'attention', 'returns']",42862,48,48,remove,0.3293593392748822,0.2569794079279078,0.33716931090747476,0.24483544598348414
