@@ -936,3 +936,324 @@ def rebalance_classes_general(X_train, y_train, balance_ratio=2.0):
     y_balanced = y_train[indices_to_keep]
     
     return X_balanced, y_balanced
+
+
+
+from sklearn.utils.class_weight import compute_class_weight
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.layers import Input, LSTM, BatchNormalization, Dropout, Dense
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adadelta
+import matplotlib.pyplot as plt
+
+
+def compute_class_weights(y):
+    unique, counts = np.unique(y, return_counts=True)
+    total = sum(counts)
+    class_weights = {int(cls): total / count for cls, count in zip(unique, counts)}
+    return class_weights
+
+def train_v5(X_train, X_valid, X_test, Y_train, Y_valid, Y_test,class_weights, epochs=20, batch_size=100, d1=0.1, d2=0.05, cell_size=80, details=False):
+    # Clearing the TensorFlow session to ensure the model starts with fresh weights and biases
+    tf.keras.backend.clear_session()
+    n_classes = 3
+
+    cell_size_1 = cell_size
+    cell_size_2 = cell_size_1 // 2
+
+    class_weight_dict = {i: weight for i, weight in enumerate(class_weights)}
+
+    # Model definition
+    inputs = Input(shape=(X_train.shape[1], X_train.shape[2]))
+    Lstm_layer_1 = LSTM(cell_size_1, return_sequences=True, stateful=False)(inputs)
+    Batch_norm_1 = BatchNormalization()(Lstm_layer_1)
+    Dropout_layer_1 = Dropout(d1)(Batch_norm_1)
+    Lstm_layer_2 = LSTM(cell_size_2, return_sequences=False, stateful=False)(Dropout_layer_1)
+    Batch_norm_2 = BatchNormalization()(Lstm_layer_2)
+    Dropout_layer_2 = Dropout(d2)(Batch_norm_2)
+    predictions = Dense(n_classes, activation='softmax')(Dropout_layer_2)
+    LSTM_base = Model(inputs=inputs, outputs=predictions)
+
+    # Optimizer
+    optimizer = Adadelta(
+        learning_rate=1.0,
+        rho=0.8,
+        epsilon=1e-7
+    )
+
+    LSTM_base.compile(
+        optimizer=optimizer,
+        loss='sparse_categorical_crossentropy',
+        metrics=['accuracy']
+    )
+
+    # Training the model with class weights
+    history = LSTM_base.fit(
+        x=X_train, y=Y_train,
+        validation_data=(X_valid, Y_valid),
+        epochs=epochs,
+        batch_size=batch_size,
+        shuffle=False,
+        verbose=0,
+        class_weight=class_weight_dict
+    )
+
+    if details:
+        LSTM_base.summary()
+        fig, ax1 = plt.subplots()
+
+        # Plot losses on the primary y-axis
+        ax1.set_xlabel('Epoch')
+        ax1.set_ylabel('Loss', color='tab:red')
+        ax1.plot(history.history['loss'], label='Train Loss', color='red', linestyle='-')
+        ax1.plot(history.history['val_loss'], label='Validation Loss', color='red', linestyle='--')
+        ax1.tick_params(axis='y', labelcolor='tab:red')
+
+        # Create a second y-axis for accuracy
+        ax2 = ax1.twinx()
+        ax2.set_ylabel('Accuracy', color='tab:blue')
+        ax2.plot(history.history['accuracy'], label='Train Accuracy', color='blue', linestyle='-')
+        ax2.plot(history.history['val_accuracy'], label='Validation Accuracy', color='blue', linestyle='--')
+        ax2.tick_params(axis='y', labelcolor='tab:blue')
+
+        # Combine legends from both axes
+        fig.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=2)  # Legend outside the plot
+
+        plt.title('Model Accuracy and Loss')
+        plt.tight_layout()  # Adjust layout to avoid clipping
+        plt.show()
+
+    y_pred = LSTM_base.predict(X_test)
+    y_pred = np.argmax(y_pred, axis=-1)
+
+    return Y_test, y_pred
+
+
+
+from tensorflow.keras.layers import Input, LSTM, Dense
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adadelta
+import matplotlib.pyplot as plt
+import tensorflow as tf
+
+
+
+def train_v6(X_train, X_valid, X_test, Y_train, Y_valid, Y_test, epochs=20, batch_size=100, cell_size=80, details=False):
+    # Clearing the TensorFlow session to ensure the model starts with fresh weights and biases
+    tf.keras.backend.clear_session()
+    n_classes = 3
+
+    # Model definition
+    inputs = Input(shape=(X_train.shape[1], X_train.shape[2]))
+    Lstm_layer_1 = LSTM(cell_size, return_sequences=False, stateful=False)(inputs)
+    predictions = Dense(n_classes, activation='softmax')(Lstm_layer_1)
+    LSTM_base = Model(inputs=inputs, outputs=predictions)
+
+    # Optimizer
+    optimizer = Adadelta(
+        learning_rate=1.0,
+        rho=0.8,
+        epsilon=1e-7
+    )
+
+    LSTM_base.compile(
+        optimizer=optimizer,
+        loss='sparse_categorical_crossentropy',
+        metrics=['accuracy']
+    )
+
+    # Training the model
+    history = LSTM_base.fit(
+        x=X_train, y=Y_train,
+        validation_data=(X_valid, Y_valid),
+        epochs=epochs,
+        batch_size=batch_size,
+        shuffle=False,
+        verbose=0
+    )
+
+    if details:
+        LSTM_base.summary()
+        fig, ax1 = plt.subplots()
+
+        # Plot losses on the primary y-axis
+        ax1.set_xlabel('Epoch')
+        ax1.set_ylabel('Loss', color='tab:red')
+        ax1.plot(history.history['loss'], label='Train Loss', color='red', linestyle='-')
+        ax1.plot(history.history['val_loss'], label='Validation Loss', color='red', linestyle='--')
+        ax1.tick_params(axis='y', labelcolor='tab:red')
+
+        # Create a second y-axis for accuracy
+        ax2 = ax1.twinx()
+        ax2.set_ylabel('Accuracy', color='tab:blue')
+        ax2.plot(history.history['accuracy'], label='Train Accuracy', color='blue', linestyle='-')
+        ax2.plot(history.history['val_accuracy'], label='Validation Accuracy', color='blue', linestyle='--')
+        ax2.tick_params(axis='y', labelcolor='tab:blue')
+
+        # Combine legends from both axes
+        fig.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=2)  # Legend outside the plot
+
+        plt.title('Model Accuracy and Loss')
+        plt.tight_layout()  # Adjust layout to avoid clipping
+        plt.show()
+
+    y_pred = LSTM_base.predict(X_test)
+    y_pred = np.argmax(y_pred, axis=-1)
+
+    return Y_test, y_pred
+
+
+
+from tensorflow.keras.layers import Input, LSTM, Dense
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adadelta
+from tensorflow.keras.regularizers import l2
+from tensorflow.keras.callbacks import EarlyStopping
+import matplotlib.pyplot as plt
+import tensorflow as tf
+
+
+def train_v7(X_train, X_valid, X_test, Y_train, Y_valid, Y_test, epochs=20, batch_size=100, cell_size=80, details=False):
+    # Clearing the TensorFlow session to ensure the model starts with fresh weights and biases
+    tf.keras.backend.clear_session()
+    n_classes = 3
+
+    # Model definition
+    inputs = Input(shape=(X_train.shape[1], X_train.shape[2]))
+    Lstm_layer_1 = LSTM(cell_size, return_sequences=False, stateful=False, kernel_regularizer=l2(0.001))(inputs)
+    predictions = Dense(n_classes, activation='softmax', kernel_regularizer=l2(0.001))(Lstm_layer_1)
+    LSTM_base = Model(inputs=inputs, outputs=predictions)
+
+    # Optimizer
+    optimizer = Adadelta(
+        learning_rate=1.0,
+        rho=0.8,
+        epsilon=1e-7
+    )
+
+    LSTM_base.compile(
+        optimizer=optimizer,
+        loss='sparse_categorical_crossentropy',
+        metrics=['accuracy']
+    )
+
+    # Early stopping callback
+    early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+
+    # Training the model
+    history = LSTM_base.fit(
+        x=X_train, y=Y_train,
+        validation_data=(X_valid, Y_valid),
+        epochs=epochs,
+        batch_size=batch_size,
+        shuffle=False,
+        verbose=0,
+        callbacks=[early_stopping]
+    )
+
+    if details:
+        LSTM_base.summary()
+        fig, ax1 = plt.subplots()
+
+        # Plot losses on the primary y-axis
+        ax1.set_xlabel('Epoch')
+        ax1.set_ylabel('Loss', color='tab:red')
+        ax1.plot(history.history['loss'], label='Train Loss', color='red', linestyle='-')
+        ax1.plot(history.history['val_loss'], label='Validation Loss', color='red', linestyle='--')
+        ax1.tick_params(axis='y', labelcolor='tab:red')
+
+        # Create a second y-axis for accuracy
+        ax2 = ax1.twinx()
+        ax2.set_ylabel('Accuracy', color='tab:blue')
+        ax2.plot(history.history['accuracy'], label='Train Accuracy', color='blue', linestyle='-')
+        ax2.plot(history.history['val_accuracy'], label='Validation Accuracy', color='blue', linestyle='--')
+        ax2.tick_params(axis='y', labelcolor='tab:blue')
+
+        # Combine legends from both axes
+        fig.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=2)  # Legend outside the plot
+
+        plt.title('Model Accuracy and Loss')
+        plt.tight_layout()  # Adjust layout to avoid clipping
+        plt.show()
+
+    y_pred = LSTM_base.predict(X_test)
+    y_pred = np.argmax(y_pred, axis=-1)
+
+    return Y_test, y_pred
+
+
+
+from tensorflow.keras.layers import Input, LSTM, Dense, Dropout
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adadelta, AdamW, RMSprop
+import matplotlib.pyplot as plt
+import tensorflow as tf
+
+
+def train_v9(X_train, X_valid, X_test, Y_train, Y_valid, Y_test, epochs=20, batch_size=100, cell_size=80, dropout_rate=0.2, optimizer_name='adamw', details=False):
+    # Clearing the TensorFlow session to ensure the model starts with fresh weights and biases
+    tf.keras.backend.clear_session()
+    n_classes = 3
+
+    # Model definition
+    inputs = Input(shape=(X_train.shape[1], X_train.shape[2]))
+    Lstm_layer_1 = LSTM(cell_size, return_sequences=False, stateful=False)(inputs)
+    Dropout_layer = Dropout(dropout_rate)(Lstm_layer_1)
+    predictions = Dense(n_classes, activation='softmax')(Dropout_layer)
+    LSTM_base = Model(inputs=inputs, outputs=predictions)
+
+    # Optimizer selection
+    if optimizer_name.lower() == 'adamw':
+        optimizer = AdamW(learning_rate=0.001)
+    elif optimizer_name.lower() == 'rmsprop':
+        optimizer = RMSprop(learning_rate=0.001)
+    elif optimizer_name.lower() == 'adadelta':
+        optimizer = Adadelta(learning_rate=1.0, rho=0.8, epsilon=1e-7)
+    else:
+        raise ValueError(f"Unsupported optimizer: {optimizer_name}")
+
+    LSTM_base.compile(
+        optimizer=optimizer,
+        loss='sparse_categorical_crossentropy',
+        metrics=['accuracy']
+    )
+
+    # Training the model
+    history = LSTM_base.fit(
+        x=X_train, y=Y_train,
+        validation_data=(X_valid, Y_valid),
+        epochs=epochs,
+        batch_size=batch_size,
+        shuffle=False,
+        verbose=0
+    )
+
+    if details:
+        fig, ax1 = plt.subplots()
+
+        # Plot losses on the primary y-axis
+        ax1.set_xlabel('Epoch')
+        ax1.set_ylabel('Loss', color='tab:red')
+        ax1.plot(history.history['loss'], label='Train Loss', color='red', linestyle='-')
+        ax1.plot(history.history['val_loss'], label='Validation Loss', color='red', linestyle='--')
+        ax1.tick_params(axis='y', labelcolor='tab:red')
+
+        # Create a second y-axis for accuracy
+        ax2 = ax1.twinx()
+        ax2.set_ylabel('Accuracy', color='tab:blue')
+        ax2.plot(history.history['accuracy'], label='Train Accuracy', color='blue', linestyle='-')
+        ax2.plot(history.history['val_accuracy'], label='Validation Accuracy', color='blue', linestyle='--')
+        ax2.tick_params(axis='y', labelcolor='tab:blue')
+
+        # Combine legends from both axes
+        fig.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=2)  # Legend outside the plot
+
+        plt.title('Model Accuracy and Loss')
+        plt.tight_layout()  # Adjust layout to avoid clipping
+        plt.show()
+
+    y_pred = LSTM_base.predict(X_test)
+    y_pred = np.argmax(y_pred, axis=-1)
+
+    return Y_test, y_pred
