@@ -11,6 +11,8 @@ from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, r
 from tensorflow.keras.optimizers import Adadelta
 from keras.layers import BatchNormalization
 
+# Model Architectures:
+
 # Base Model:
 """Simple Architecture:
  - Input 3D
