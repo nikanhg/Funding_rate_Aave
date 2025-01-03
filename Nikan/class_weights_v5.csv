@@ -1,0 +1,5 @@
+,columns,class_weights,total_test_windows,input_window,output_window,outlier_threshold,accuracy,precision,recall,f1
+0,"['lending_rate', 'borrowing_rate', 'utilization_rate', 'yield', 'market_cap', 'attention', 'returns', 'volume']","{0: 3.3682979231320123, 1: 2.5716837385630447, 2: 3.1820396012809526}",56869,48,48,remove,0.2643443703951186,0.36403083246719753,0.3504747573975826,0.2551250371802454
+1,"['lending_rate', 'borrowing_rate', 'utilization_rate', 'yield', 'market_cap', 'attention', 'returns', 'volume']","{0: 6.0, 1: 1.0, 2: 1.0}",56869,48,48,remove,0.22683711688266014,0.3084616705992812,0.35537453385108475,0.21621863604159816
+2,"['lending_rate', 'borrowing_rate', 'utilization_rate', 'yield', 'market_cap', 'attention', 'returns', 'volume']","{0: 1.5974659579115997, 1: 5.123705722070845, 2: 5.5916737468139335}",55755,96,8,remove,0.050112097569724685,0.03170311944017792,0.3232983097304705,0.055201987424652876
+3,"['lending_rate', 'borrowing_rate', 'utilization_rate', 'yield', 'market_cap', 'attention', 'returns', 'volume']","{0: 6.0, 1: 1.0, 2: 1.0}",55755,96,8,remove,0.04824679400950587,0.034277587304652475,0.30998133636324593,0.059387758589099095
