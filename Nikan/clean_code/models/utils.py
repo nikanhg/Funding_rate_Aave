@@ -235,7 +235,62 @@ def create_cyclical_encodings(df, date_col):
 
 
 
+def train_and_evaluate_simple(inputs, outputs, test_size=0.2, valid_size=0.25, random_state=42, epochs=30, batch_size=100):
+    # Clearing the TensorFlow session to ensure the model starts with fresh weights and biases
+    tf.keras.backend.clear_session()
 
+    # Setting the seed for reproducibility
+    np.random.seed(random_state)
+    tf.random.set_seed(random_state)
+
+    # Splitting the data into train+validation and test sets
+    X_train_valid, X_test, y_train_valid, y_test = train_test_split(
+        inputs, outputs, test_size=test_size, random_state=random_state)
+
+    # Splitting the train+validation set into separate training and validation sets
+    X_train, X_valid, y_train, y_valid = train_test_split(
+        X_train_valid, y_train_valid, test_size=valid_size, random_state=random_state)
+
+    # Printing the shapes of the datasets
+    print("Training data shape:", X_train.shape)
+    print("Validation data shape:", X_valid.shape)
+    print("Test data shape:", X_test.shape)
+    print("Training labels shape:", y_train.shape)
+    print("Validation labels shape:", y_valid.shape)
+    print("Test labels shape:", y_test.shape)
+
+    # Model definition
+    model = Sequential([
+        LSTM(48, activation='tanh', input_shape=(inputs.shape[1], inputs.shape[2]), return_sequences=True),
+        Dropout(0.2),
+        LSTM(48, activation='tanh'),
+        Dropout(0.2),
+        Dense(outputs.shape[1] * outputs.shape[2]),
+    ])
+
+    # Compiling the model
+    model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+
+    # Training the model
+    history = model.fit(
+        X_train, y_train.reshape(y_train.shape[0], -1),
+        epochs=epochs,
+        batch_size=batch_size,
+        validation_data=(X_valid, y_valid.reshape(y_valid.shape[0], -1))
+    )
+
+    # Plotting training and validation loss
+    plt.plot(history.history['loss'], label='Train Loss')
+    plt.plot(history.history['val_loss'], label='Validation Loss')
+    plt.title('Model Loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend()
+    plt.show()
+
+    # Making predictions on the test set
+    test_predictions = model.predict(X_test)
+    return y_test, test_predictions
 
 
 
