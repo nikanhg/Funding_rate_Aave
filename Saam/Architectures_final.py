@@ -1,4 +1,4 @@
-# Architectures to get more robust results
+# Multiple Architectures to get more robust results
 
 import numpy as np
 import tensorflow as tf
